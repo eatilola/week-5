@@ -79,45 +79,44 @@ df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/mai
 def survival_demographics():
     age_bins = [-1, 12, 19, 59, float("inf")]
     age_labels = ["child", "teen", "adult", "senior"]
+    pclass_order = [1, 2, 3]
+    sex_order = ["female", "male"]
 
-    df_local = df.copy()
+    # Work on a copy
+    data = df.copy()
 
-    df_local["age_group"] = pd.cut(
-        df_local["Age"],
+    # Create age_group as plain strings (NOT categorical)
+    data["age_group"] = pd.cut(
+        data["Age"],
         bins=age_bins,
         labels=age_labels,
         include_lowest=True,
-    )
+    ).astype(str)
 
-    # Group only observed data (no categorical tricks)
+    # Normalize sex
+    data["sex"] = data["Sex"].astype(str).str.strip().str.lower()
+
+    # Group observed data only
     grouped = (
-        df_local.groupby(["Pclass", "Sex", "age_group"], dropna=False)
-          .agg(
-              n_passengers=("PassengerId", "size"),
-              n_survivors=("Survived", "sum"),
-          )
-          .reset_index()
-          .rename(columns={"Pclass": "pclass", "Sex": "sex"})
+        data.groupby(["Pclass", "sex", "age_group"], dropna=False)
+            .agg(
+                n_passengers=("PassengerId", "size"),
+                n_survivors=("Survived", "sum"),
+            )
+            .reset_index()
+            .rename(columns={"Pclass": "pclass"})
     )
 
-    # Normalize
-    grouped["sex"] = grouped["sex"].astype(str).str.strip().str.lower()
-    grouped["age_group"] = grouped["age_group"].astype(str).str.strip().str.lower()
-
-    # Build the full 24-combo grid manually
-    pclass_order = [1, 2, 3]
-    sex_order = ["female", "male"]
-    age_order = ["child", "teen", "adult", "senior"]
-
+    # Build full 24-row grid
     full_grid = pd.DataFrame(
-        [(p, s, a) for p in pclass_order for s in sex_order for a in age_order],
+        [(p, s, a) for p in pclass_order for s in sex_order for a in age_labels],
         columns=["pclass", "sex", "age_group"],
     )
 
-    # Merge observed data onto full grid (missing combos become NaN)
+    # Merge (missing combos become NaN)
     grouped = full_grid.merge(grouped, on=["pclass", "sex", "age_group"], how="left")
 
-    # Fill missing
+    # Fill zeros
     grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
     grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
 
@@ -128,9 +127,9 @@ def survival_demographics():
         grouped.loc[mask, "n_survivors"] / grouped.loc[mask, "n_passengers"]
     )
 
-    # Categorical dtype (autograder requirement)
+    # Categorical dtype
     grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
-    grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
+    grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_labels, ordered=True)
 
     grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
 
