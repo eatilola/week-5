@@ -77,16 +77,14 @@ df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/mai
 #     return grouped
 
 def survival_demographics():
-    raise Exception("THIS IS THE NEW VERSION")
     age_bins = [-1, 12, 19, 59, float("inf")]
     age_labels = ["child", "teen", "adult", "senior"]
     pclass_order = [1, 2, 3]
     sex_order = ["female", "male"]
 
-    # Work on a copy
     data = df.copy()
 
-    # Create age_group as plain strings (NOT categorical)
+    # age_group as plain string (not categorical)
     data["age_group"] = pd.cut(
         data["Age"],
         bins=age_bins,
@@ -94,12 +92,12 @@ def survival_demographics():
         include_lowest=True,
     ).astype(str)
 
-    # Normalize sex
+    # normalize sex on data
     data["sex"] = data["Sex"].astype(str).str.strip().str.lower()
 
-    # Group observed data only
+    # groupby observed only
     grouped = (
-        data.groupby(["Pclass", "sex", "age_group"], dropna=False)
+        data.groupby(["Pclass", "sex", "age_group"], dropna=True, observed=True)
             .agg(
                 n_passengers=("PassengerId", "size"),
                 n_survivors=("Survived", "sum"),
@@ -108,27 +106,31 @@ def survival_demographics():
             .rename(columns={"Pclass": "pclass"})
     )
 
-    # Build full 24-row grid
+    # normalize age_group in grouped (in case "nan" strings appear)
+    grouped["age_group"] = grouped["age_group"].astype(str).str.strip().str.lower()
+    grouped = grouped[grouped["age_group"].isin(age_labels)]
+
+    # full 24-row grid
     full_grid = pd.DataFrame(
         [(p, s, a) for p in pclass_order for s in sex_order for a in age_labels],
         columns=["pclass", "sex", "age_group"],
     )
 
-    # Merge (missing combos become NaN)
+    # merge
     grouped = full_grid.merge(grouped, on=["pclass", "sex", "age_group"], how="left")
 
-    # Fill zeros
+    # fill zeros
     grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
     grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
 
-    # Survival rate
+    # survival rate
     grouped["survival_rate"] = 0.0
     mask = grouped["n_passengers"] > 0
     grouped.loc[mask, "survival_rate"] = (
         grouped.loc[mask, "n_survivors"] / grouped.loc[mask, "n_passengers"]
     )
 
-    # Categorical dtype
+    # categorical dtype
     grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
     grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_labels, ordered=True)
 
