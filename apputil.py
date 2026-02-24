@@ -36,15 +36,18 @@ def survival_demographics():
       .rename(columns={"Pclass": "pclass", "Sex": "sex"})
     )
     
-    # Force the exact categories and order we want for consistent plotting and to include zero-count groups
+    # Force exact category sets on the GROUPED TABLE (not df)
     pclass_order = [1, 2, 3]
     sex_order = ["female", "male"]
     age_order = ["child", "teen", "adult", "senior"]
 
+    grouped["pclass"] = pd.Categorical(grouped["pclass"], categories=pclass_order, ordered=True)
     grouped["sex"] = grouped["sex"].astype(str).str.strip().str.lower()
+    grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
     grouped["age_group"] = grouped["age_group"].astype(str).str.strip().str.lower()
+    grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
 
-    # Reindex to include ALL combinations (including zero-member groups)
+    # Build full grid and reindex (this will create missing rows as NaN)
     all_combos = pd.MultiIndex.from_product(
         [pclass_order, sex_order, age_order],
         names=["pclass", "sex", "age_group"],
@@ -59,6 +62,7 @@ def survival_demographics():
     # Fill missing groups with zeros
     grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
     grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
+
 
     # Recompute survival_rate safely
     grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"].replace(0, pd.NA)
