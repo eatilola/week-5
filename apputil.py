@@ -11,8 +11,8 @@ def survival_demographics():
     """
     Group Titanic passengers by class, sex, and age group, then compute survival stats.
 
-    - Creates an age_category column (Child/Teen/Adult/Senior).
-    - For each (Pclass, Sex, age_category) group, calculates:
+    - Creates an age_group column (Child/Teen/Adult/Senior).
+    - For each (Pclass, Sex, age_group) group, calculates:
       - n_passengers
       - n_survivors
       - survival_rate
@@ -20,21 +20,23 @@ def survival_demographics():
     age_bins = [-1, 12, 19, 59, float("inf")]
     age_labels = ["Child", "Teen", "Adult", "Senior"]
 
-    df["age_category"] = pd.cut(
+    df["age_group"] = pd.cut(
         df["Age"],
         bins=age_bins,
         labels=age_labels,
         include_lowest=True,
     )
+    df["age_group"] = pd.Categorical(df["age_group"], categories=age_labels, ordered=True)
 
     grouped = (
-        df.groupby(["Pclass", "Sex", "age_category"], dropna=False, observed=False)
-        .agg(
-            n_passengers=("PassengerId", "size"),
-            n_survivors=("Survived", "sum"),
-        )
-        .reset_index()
-        .sort_values(["Pclass", "Sex", "age_category"])
+    df.groupby(["Pclass", "Sex", "age_group"], dropna=False, observed=False)
+      .agg(
+          n_passengers=("PassengerId", "size"),
+          n_survivors=("Survived", "sum"),
+      )
+      .reset_index()
+      .rename(columns={"Pclass": "pclass", "Sex": "sex"})
+      .sort_values(["pclass", "sex", "age_group"])
     )
 
     grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"]
@@ -44,13 +46,13 @@ def survival_demographics():
         [
             sorted(df["Pclass"].dropna().unique()),
             sorted(df["Sex"].dropna().unique()),
-            list(df["age_category"].cat.categories),
+            list(df["age_group"].cat.categories),
         ],
-        names=["Pclass", "Sex", "age_category"],
+        names=["Pclass", "Sex", "age_group"],
     )
 
     grouped = (
-        grouped.set_index(["Pclass", "Sex", "age_category"])
+        grouped.set_index(["Pclass", "Sex", "age_group"])
         .reindex(all_combos)
         .reset_index()
     )
@@ -64,11 +66,11 @@ def survival_demographics():
     age_order = ["Child", "Teen", "Adult", "Senior"]
 
     grouped["Sex"] = pd.Categorical(grouped["Sex"], categories=sex_order, ordered=True)
-    grouped["age_category"] = pd.Categorical(
-        grouped["age_category"], categories=age_order, ordered=True
+    grouped["age_group"] = pd.Categorical(
+        grouped["age_group"], categories=age_order, ordered=True
     )
 
-    grouped = grouped.sort_values(["Pclass", "Sex", "age_category"]).reset_index(drop=True)
+    grouped = grouped.sort_values(["Pclass", "Sex", "age_group"]).reset_index(drop=True)
 
     # print(grouped.head(20))
     return grouped
@@ -91,7 +93,7 @@ def visualize_demographic():
     men = results[results["Sex"] == "male"].groupby("Pclass", as_index=False)["n_survivors"].sum()
     men = men.rename(columns={"n_survivors": "men_survivors"})
 
-    children = results[results["age_category"] == "Child"].groupby("Pclass", as_index=False)["n_survivors"].sum()
+    children = results[results["age_group"] == "Child"].groupby("Pclass", as_index=False)["n_survivors"].sum()
     children = children.rename(columns={"n_survivors": "child_survivors"})
 
     
