@@ -77,14 +77,16 @@ df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/mai
 #     return grouped
 
 def survival_demographics():
+    df_fresh = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
+    
     age_bins = [-1, 12, 19, 59, float("inf")]
     age_labels = ["child", "teen", "adult", "senior"]
 
-    df["age_group"] = pd.cut(df["Age"], bins=age_bins, labels=age_labels, include_lowest=True)
-    df["age_group"] = pd.Categorical(df["age_group"], categories=age_labels, ordered=True)
+    df_fresh["age_group"] = pd.cut(df_fresh["Age"], bins=age_bins, labels=age_labels, include_lowest=True)
+    df_fresh["age_group"] = pd.Categorical(df_fresh["age_group"], categories=age_labels, ordered=True)
 
     grouped = (
-        df.groupby(["Pclass", "Sex", "age_group"], observed=False)
+        df_fresh.groupby(["Pclass", "Sex", "age_group"], observed=False)
         .agg(
             n_passengers=("PassengerId", "size"),
             n_survivors=("Survived", "sum")
@@ -92,32 +94,22 @@ def survival_demographics():
         .reset_index()
     )
 
-    # IMMEDIATELY convert to int
     grouped["n_passengers"] = grouped["n_passengers"].astype(int)
     grouped["n_survivors"] = grouped["n_survivors"].astype(int)
 
-    # Rename
     grouped = grouped.rename(columns={"Pclass": "pclass", "Sex": "sex"})
     grouped["sex"] = grouped["sex"].str.lower()
 
-    # Survival rate
     grouped["survival_rate"] = 0.0
     mask = grouped["n_passengers"] > 0
     grouped.loc[mask, "survival_rate"] = (
         grouped.loc[mask, "n_survivors"] / grouped.loc[mask, "n_passengers"]
     )
 
-    # Categorical
     grouped["sex"] = pd.Categorical(grouped["sex"], categories=["female", "male"], ordered=True)
     grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_labels, ordered=True)
 
-    grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
-
-    # Assert check (remove before final submission)
-    assert (grouped["n_passengers"] == 0).sum() >= 1, f"Expected at least 1 zero-member group, got {(grouped['n_passengers'] == 0).sum()}"
-    assert ((grouped["pclass"] == 2) & (grouped["sex"] == "female") & (grouped["age_group"] == "senior")).any(), "Missing (2, female, senior) row"
-
-    return grouped
+    return grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
 
 def visualize_demographic():
     """
