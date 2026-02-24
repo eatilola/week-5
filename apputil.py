@@ -275,8 +275,8 @@ def visualize_families():
         },
         title=(
             "Large 3rd-Class Families: Max Fare vs Family Size\n"
-            f"Baseline = Avg 1st-Class Fare ({first_class_avg_fare:.2f}) | "
-            f"Groups meeting/exceeding baseline: {n_groups_meeting}/{n_groups_total}"
+            f"| Baseline = Avg 1st-Class Fare ({first_class_avg_fare:.2f})"
+            # f"Groups meeting/exceeding baseline: {n_groups_meeting}/{n_groups_total}"
         ),
         labels={
             "family_size": "Family Size (3rd class only, 5+)",
