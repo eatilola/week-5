@@ -6,20 +6,14 @@ from apputil import *
 df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
 
 # === DEBUG CODE (remove after checking) ===
-st.write("DataFrame shape:", df.shape)
-st.write("Columns:", df.columns.tolist())
-st.write("Sample of 2nd class females:")
-st.write(df[(df["Pclass"] == 2) & (df["Sex"] == "female")][["Pclass", "Sex", "Age"]].head(20))
-st.write("Age distribution for 2nd class females:")
-st.write(df[(df["Pclass"] == 2) & (df["Sex"] == "female")]["Age"].describe())
-
-age_bins = [-1, 12, 19, 59, float("inf")]
-age_labels = ["child", "teen", "adult", "senior"]
-df["age_check"] = pd.cut(df["Age"], bins=age_bins, labels=age_labels, include_lowest=True)
-
-seniors_2f = df[(df["Pclass"] == 2) & (df["Sex"] == "female") & (df["age_check"] == "senior")]
-st.write("2nd class female seniors count:", len(seniors_2f))
-st.write(seniors_2f[["Pclass", "Sex", "Age", "age_check"]])
+out = survival_demographics()
+st.write("Columns:", out.columns.tolist())
+st.write("Dtypes:")
+st.write(out.dtypes)
+st.write("First 5 rows:")
+st.write(out.head())
+st.write("age_group unique values:", out["age_group"].unique().tolist())
+st.write("sex unique values:", out["sex"].unique().tolist())
 
 # === END DEBUG CODE ===
 

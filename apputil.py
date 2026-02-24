@@ -5,82 +5,11 @@ import pandas as pd
 
 df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
 
-
-# def survival_demographics():
-#     """
-#     Group Titanic passengers by class, sex, and age group, then compute survival stats.
-
-#     - Creates an age_group column (Child/Teen/Adult/Senior).
-#     - For each (Pclass, Sex, age_group) group, calculates:
-#       - n_passengers
-#       - n_survivors
-#       - survival_rate
-#     """
-#     age_bins = [-1, 12, 19, 59, float("inf")]
-#     age_labels = ["child", "teen", "adult", "senior"]
-
-#     df["age_group"] = pd.cut(
-#         df["Age"],
-#         bins=age_bins,
-#         labels=age_labels,
-#         include_lowest=True,
-#     )
-#     df["age_group"] = pd.Categorical(df["age_group"], categories=age_labels, ordered=True)
-#     grouped = (
-#     df.groupby(["Pclass", "Sex", "age_group"], dropna=False, observed=True)
-#       .agg(
-#           n_passengers=("PassengerId", "size"),
-#           n_survivors=("Survived", "sum"),
-#       )
-#       .reset_index()
-#       .rename(columns={"Pclass": "pclass", "Sex": "sex"})
-#     )
-    
-#     # Force exact category sets on the GROUPED TABLE (not df)
-#     pclass_order = [1, 2, 3]
-#     sex_order = ["female", "male"]
-#     age_order = ["child", "teen", "adult", "senior"]
-
-#     grouped["pclass"] = pd.Categorical(grouped["pclass"], categories=pclass_order, ordered=True)
-#     grouped["sex"] = grouped["sex"].astype(str).str.strip().str.lower()
-#     grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
-#     grouped["age_group"] = grouped["age_group"].astype(str).str.strip().str.lower()
-#     grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
-
-#     # Build full grid and reindex (this will create missing rows as NaN)
-#     all_combos = pd.MultiIndex.from_product(
-#         [pclass_order, sex_order, age_order],
-#         names=["pclass", "sex", "age_group"],
-#     )
-
-#     grouped = (
-#         grouped.set_index(["pclass", "sex", "age_group"])
-#             .reindex(all_combos)
-#             .reset_index()
-#     )
-
-#     # Fill missing groups with zeros
-#     grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
-#     grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
-
-
-#     # Recompute survival_rate safely
-#     grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"].replace(0, pd.NA)
-#     grouped["survival_rate"] = grouped["survival_rate"].fillna(0.0)
-
-#     # Sort in a consistent order
-#     grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
-#     grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
-    
-#     grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
-    
-#     return grouped
-
 def survival_demographics():
     df_fresh = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     
     age_bins = [-1, 12, 19, 59, float("inf")]
-    age_labels = ["child", "teen", "adult", "senior"]
+    age_labels = ["Child", "Teen", "Adult", "Senior"]
 
     df_fresh["age_group"] = pd.cut(df_fresh["Age"], bins=age_bins, labels=age_labels, include_lowest=True)
     df_fresh["age_group"] = pd.Categorical(df_fresh["age_group"], categories=age_labels, ordered=True)
