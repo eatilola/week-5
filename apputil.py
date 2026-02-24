@@ -80,8 +80,10 @@ def survival_demographics():
     age_bins = [-1, 12, 19, 59, float("inf")]
     age_labels = ["child", "teen", "adult", "senior"]
 
-    df["age_group"] = pd.cut(
-        df["Age"],
+    df_local = df.copy()
+
+    df_local["age_group"] = pd.cut(
+        df_local["Age"],
         bins=age_bins,
         labels=age_labels,
         include_lowest=True,
@@ -89,7 +91,7 @@ def survival_demographics():
 
     # Group only observed data (no categorical tricks)
     grouped = (
-        df.groupby(["Pclass", "Sex", "age_group"], dropna=False)
+        df_local.groupby(["Pclass", "Sex", "age_group"], dropna=False)
           .agg(
               n_passengers=("PassengerId", "size"),
               n_survivors=("Survived", "sum"),
