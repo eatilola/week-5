@@ -27,7 +27,7 @@ def survival_demographics():
     )
     df["age_group"] = pd.Categorical(df["age_group"], categories=age_labels, ordered=True)
     grouped = (
-    df.groupby(["Pclass", "Sex", "age_group"], dropna=False, observed=False)
+    df.groupby(["Pclass", "Sex", "age_group"], dropna=False, observed=True)
       .agg(
           n_passengers=("PassengerId", "size"),
           n_survivors=("Survived", "sum"),
