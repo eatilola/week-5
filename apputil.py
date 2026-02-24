@@ -77,16 +77,12 @@ df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/mai
 #     return grouped
 
 def survival_demographics():
-    # 1. Define bins and labels (using lowercase as we discussed)
     age_bins = [-1, 12, 19, 59, float("inf")]
     age_labels = ["child", "teen", "adult", "senior"]
 
-    # 2. Create the categorical age_group column
     df["age_group"] = pd.cut(df["Age"], bins=age_bins, labels=age_labels, include_lowest=True)
     df["age_group"] = pd.Categorical(df["age_group"], categories=age_labels, ordered=True)
 
-    # 3. Groupby with observed=False. 
-    # This automatically creates rows for every combo (24 rows total)
     grouped = (
         df.groupby(["Pclass", "Sex", "age_group"], observed=False)
         .agg(
@@ -94,26 +90,34 @@ def survival_demographics():
             n_survivors=("Survived", "sum")
         )
         .reset_index()
-        .rename(columns={"Pclass": "pclass", "Sex": "sex"})
     )
 
-    # 4. Normalize and clean up
+    # IMMEDIATELY convert to int
+    grouped["n_passengers"] = grouped["n_passengers"].astype(int)
+    grouped["n_survivors"] = grouped["n_survivors"].astype(int)
+
+    # Rename
+    grouped = grouped.rename(columns={"Pclass": "pclass", "Sex": "sex"})
     grouped["sex"] = grouped["sex"].str.lower()
-    grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
-    grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
 
-    # 5. Calculate survival_rate (This avoids the fillna warning and division by zero)
+    # Survival rate
     grouped["survival_rate"] = 0.0
-    has_passengers = grouped["n_passengers"] > 0
-    grouped.loc[has_passengers, "survival_rate"] = (
-        grouped.loc[has_passengers, "n_survivors"] / grouped.loc[has_passengers, "n_passengers"]
+    mask = grouped["n_passengers"] > 0
+    grouped.loc[mask, "survival_rate"] = (
+        grouped.loc[mask, "n_survivors"] / grouped.loc[mask, "n_passengers"]
     )
 
-    # 6. Final formatting for the autograder
+    # Categorical
     grouped["sex"] = pd.Categorical(grouped["sex"], categories=["female", "male"], ordered=True)
-    # age_group is already categorical from the groupby
-    
-    return grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
+    grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_labels, ordered=True)
+
+    grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
+
+    # Assert check (remove before final submission)
+    assert (grouped["n_passengers"] == 0).sum() >= 1, f"Expected at least 1 zero-member group, got {(grouped['n_passengers'] == 0).sum()}"
+    assert ((grouped["pclass"] == 2) & (grouped["sex"] == "female") & (grouped["age_group"] == "senior")).any(), "Missing (2, female, senior) row"
+
+    return grouped
 
 def visualize_demographic():
     """
