@@ -38,35 +38,37 @@ def survival_demographics():
       .sort_values(["pclass", "sex", "age_group"])
     )
     
-    # Ensure ALL combinations appear (even if count is 0)
+    # Force the exact categories and order we want for consistent plotting and to include zero-count groups
+    pclass_order = [1, 2, 3]
+    sex_order = ["female", "male"]
+    age_order = ["child", "teen", "adult", "senior"]
+
+    # Make sure age_group uses these exact categories
+    df["age_group"] = pd.Categorical(df["age_group"], categories=age_order, ordered=True)
+
+    # Reindex to include ALL combinations (including zero-member groups)
     all_combos = pd.MultiIndex.from_product(
-        [
-            sorted(df["Pclass"].dropna().unique()),          # raw df column
-            sorted(df["Sex"].dropna().unique()),             # raw df column
-            list(df["age_group"].cat.categories),            # categorical categories
-        ],
-        names=["pclass", "sex", "age_group"],                # OUTPUT column names
+        [pclass_order, sex_order, age_order],
+        names=["pclass", "sex", "age_group"],
     )
 
     grouped = (
-        grouped.set_index(["pclass", "sex", "age_group"])    # use renamed cols
+        grouped.set_index(["pclass", "sex", "age_group"])
             .reindex(all_combos)
             .reset_index()
     )
 
+    # Fill missing groups with zeros
     grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
-    grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"]
     grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
+
+    # Recompute survival_rate safely
+    grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"].replace(0, pd.NA)
     grouped["survival_rate"] = grouped["survival_rate"].fillna(0.0)
 
-    # Optional ordering (ONLY if your Sex values are exactly "female"/"male")
-    sex_order = ["female", "male"]
+    # Sort in a consistent order
     grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
-
-    # Keep age_order consistent with your age_labels
-    age_order = list(df["age_group"].cat.categories)
     grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
-
     grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
     return grouped
 
