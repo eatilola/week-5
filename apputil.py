@@ -6,6 +6,24 @@ import pandas as pd
 df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
 
 def survival_demographics():
+    """
+    Group Titanic passengers by class, sex, and age group, then compute survival statistics.
+
+    Creates an age_group column with categories: Child (0-12), Teen (13-19), Adult (20-59), Senior (60+).
+    Groups passengers by (pclass, sex, age_group) and calculates:
+        - n_passengers: total number of passengers in the group
+        - n_survivors: number of survivors in the group
+        - survival_rate: proportion of survivors (0.0 if no passengers)
+
+    Returns:
+        pd.DataFrame: A DataFrame with columns:
+            - pclass (int): Passenger class (1, 2, or 3)
+            - sex (category): 'female' or 'male'
+            - age_group (category): 'Child', 'Teen', 'Adult', or 'Senior'
+            - n_passengers (int): Count of passengers
+            - n_survivors (int): Count of survivors
+            - survival_rate (float): Survival rate (n_survivors / n_passengers)
+    """
     df_fresh = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
     
     age_bins = [-1, 12, 19, 59, float("inf")]
