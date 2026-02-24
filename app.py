@@ -7,6 +7,12 @@ df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/mai
 
 st.write("Even with the 'women and children first' idea, in which passenger class did more men survive than children, and by how many survivors?")
 # Generate and display the figure
+
+out = survival_demographics()
+st.write("Total rows:", len(out))
+st.write("Zero-member rows:", int((out["n_passengers"] == 0).sum()))
+st.write(out[(out["pclass"] == 2) & (out["sex"] == "female") & (out["age_group"] == "senior")])
+
 fig1 = visualize_demographic()
 st.plotly_chart(fig1, width="stretch")
 
