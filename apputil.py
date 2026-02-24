@@ -5,7 +5,6 @@ import pandas as pd
 
 df = pd.read_csv('https://raw.githubusercontent.com/leontoddjohnson/datasets/main/data/titanic.csv')
 
-df.head()
 
 def survival_demographics():
     """
@@ -18,7 +17,7 @@ def survival_demographics():
       - survival_rate
     """
     age_bins = [-1, 12, 19, 59, float("inf")]
-    age_labels = ["Child", "Teen", "Adult", "Senior"]
+    age_labels = ["child", "teen", "adult", "senior"]
 
     df["age_group"] = pd.cut(
         df["Age"],
@@ -38,41 +37,37 @@ def survival_demographics():
       .rename(columns={"Pclass": "pclass", "Sex": "sex"})
       .sort_values(["pclass", "sex", "age_group"])
     )
-
-    grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"]
     
-     # Ensure ALL combinations appear (even if count is 0)
+    # Ensure ALL combinations appear (even if count is 0)
     all_combos = pd.MultiIndex.from_product(
         [
-            sorted(df["Pclass"].dropna().unique()),
-            sorted(df["Sex"].dropna().unique()),
-            list(df["age_group"].cat.categories),
+            sorted(df["Pclass"].dropna().unique()),          # raw df column
+            sorted(df["Sex"].dropna().unique()),             # raw df column
+            list(df["age_group"].cat.categories),            # categorical categories
         ],
-        names=["Pclass", "Sex", "age_group"],
+        names=["pclass", "sex", "age_group"],                # OUTPUT column names
     )
 
     grouped = (
-        grouped.set_index(["Pclass", "Sex", "age_group"])
-        .reindex(all_combos)
-        .reset_index()
+        grouped.set_index(["pclass", "sex", "age_group"])    # use renamed cols
+            .reindex(all_combos)
+            .reset_index()
     )
 
     grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
+    grouped["survival_rate"] = grouped["n_survivors"] / grouped["n_passengers"]
     grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
     grouped["survival_rate"] = grouped["survival_rate"].fillna(0.0)
 
-    # Order the results so they are easy to interpret
+    # Optional ordering (ONLY if your Sex values are exactly "female"/"male")
     sex_order = ["female", "male"]
-    age_order = ["Child", "Teen", "Adult", "Senior"]
+    grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
 
-    grouped["Sex"] = pd.Categorical(grouped["Sex"], categories=sex_order, ordered=True)
-    grouped["age_group"] = pd.Categorical(
-        grouped["age_group"], categories=age_order, ordered=True
-    )
+    # Keep age_order consistent with your age_labels
+    age_order = list(df["age_group"].cat.categories)
+    grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
 
-    grouped = grouped.sort_values(["Pclass", "Sex", "age_group"]).reset_index(drop=True)
-
-    # print(grouped.head(20))
+    grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
     return grouped
 
 def visualize_demographic():
@@ -90,15 +85,15 @@ def visualize_demographic():
     results = survival_demographics()
 
     # Keep only the rows we need for the question
-    men = results[results["Sex"] == "male"].groupby("Pclass", as_index=False)["n_survivors"].sum()
+    men = results[results["sex"] == "male"].groupby("pclass", as_index=False)["n_survivors"].sum()
     men = men.rename(columns={"n_survivors": "men_survivors"})
 
-    children = results[results["age_group"] == "Child"].groupby("Pclass", as_index=False)["n_survivors"].sum()
+    children = results[results["age_group"] == "child"].groupby("pclass", as_index=False)["n_survivors"].sum()
     children = children.rename(columns={"n_survivors": "child_survivors"})
 
     
 
-    compare = men.merge(children, on="Pclass", how="outer").fillna(0)
+    compare = men.merge(children, on="pclass", how="outer").fillna(0)
     compare["men_survivors"] = compare["men_survivors"].astype(int)
     compare["child_survivors"] = compare["child_survivors"].astype(int)
     compare["difference_men_minus_children"] = compare["men_survivors"] - compare["child_survivors"]
@@ -112,18 +107,28 @@ def visualize_demographic():
     )
 
     child_total = (
-        df[pd.cut(df["Age"], bins=[-1, 12, 19, 59, float("inf")], labels=["Child", "Teen", "Adult", "Senior"], include_lowest=True) == "Child"]
-        .groupby("Pclass", as_index=False)
-        .size()
-        .rename(columns={"size": "child_total"})
+    df[
+        pd.cut(
+            df["Age"],
+            bins=[-1, 12, 19, 59, float("inf")],
+            labels=["Child", "Teen", "Adult", "Senior"],
+            include_lowest=True,
+        )
+        == "Child"
+    ]
+    .groupby("Pclass", as_index=False)
+    .size()
+    .rename(columns={"size": "child_total"})
     )
+    men_total = men_total.rename(columns={"Pclass": "pclass"})
+    child_total = child_total.rename(columns={"Pclass": "pclass"})
 
-    compare = compare.merge(men_total, on="Pclass", how="left").merge(child_total, on="Pclass", how="left").fillna(0)
+    compare = compare.merge(men_total, on="pclass", how="left").merge(child_total, on="pclass", how="left").fillna(0)
     compare["men_total"] = compare["men_total"].astype(int)
     compare["child_total"] = compare["child_total"].astype(int)
 
     bars = compare.melt(
-        id_vars=["Pclass", "difference_men_minus_children"],
+        id_vars=["pclass", "difference_men_minus_children"],
         value_vars=["men_survivors", "child_survivors", "men_total", "child_total"],
         var_name="group",
         value_name="count",
@@ -137,17 +142,6 @@ def visualize_demographic():
     }
     bars["group"] = bars["group"].map(label_map)
 
-    fig = px.bar(
-        bars,
-        x="Pclass",
-        y="count",
-        color="group",
-        barmode="group",
-        text="count",
-        title="Survivors by Class: Men vs. Children (with Men − Children difference)",
-        labels={"Pclass": "Passenger Class", "count": "Count", "group": ""},
-    )
-
    
     color_map = {
         "Men survivors": "#4C9AFF",
@@ -158,12 +152,13 @@ def visualize_demographic():
 
     fig = px.bar(
     bars,
-    x="Pclass",
+    x="pclass",
     y="count",
     color="group",
     barmode="group",
     title="Men vs. Children by Class",
-    labels={"Pclass": "Passenger Class", "count": "Count", "group": ""},)
+    labels={"pclass": "Passenger Class", "count": "Count", "group": ""},
+    color_discrete_map=color_map)
 
     # Make the "total" bars faded
     fig.update_traces(
@@ -198,14 +193,14 @@ def visualize_demographic():
 def family_groups():
         """Explore the relationship between family size, passenger class, and ticket fare.
             - Create a family_size column by summing SibSp and Parch + 1 (for the passenger themselves).
-            - Group by Pclass and family_size, then calculate:
+            - Group by pclass and family_size, then calculate:
             - n_passengers
             - average fare
             - The minimum and maximum ticket fares (to capture variation in wealth), min_fare and max_fare
-            - Sort the results by Pclass and family_size for easier interpretation.
+            - Sort the results by pclass and family_size for easier interpretation.
 
             returns:
-                A DataFrame with columns: Pclass, family_size, n_passengers, avg_fare, min_fare, max_fare
+                A DataFrame with columns: pclass, family_size, n_passengers, avg_fare, min_fare, max_fare
         """
         df["family_size"] = df["SibSp"] + df["Parch"] + 1
 
@@ -218,7 +213,9 @@ def family_groups():
                 max_fare=("Fare", "max"),
             )
             .reset_index()
-            .sort_values(["Pclass", "family_size"])
+            .rename(columns={"Pclass": "pclass"})
+            .sort_values(["pclass", "family_size"])
+            .reset_index(drop=True)
         )
 
         return grouped
@@ -253,7 +250,7 @@ def visualize_families():
     first_class_avg_fare = float(df.loc[df["Pclass"] == 1, "Fare"].mean())
 
     # Focus: 3rd class, large families
-    large_third = results[(results["Pclass"] == 3) & (results["family_size"] >= 5)].copy()
+    large_third = results[(results["pclass"] == 3) & (results["family_size"] >= 5)].copy()
     large_third["meets_or_exceeds_1st_avg"] = large_third["max_fare"] >= first_class_avg_fare
 
     n_groups_total = int(len(large_third))
@@ -266,7 +263,7 @@ def visualize_families():
         color="meets_or_exceeds_1st_avg",
         size="n_passengers",
         hover_data={
-            "Pclass": True,
+            "pclass": True,
             "family_size": True,
             "n_passengers": True,
             "avg_fare": ":.2f", 
