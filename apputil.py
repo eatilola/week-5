@@ -26,7 +26,6 @@ def survival_demographics():
         include_lowest=True,
     )
     df["age_group"] = pd.Categorical(df["age_group"], categories=age_labels, ordered=True)
-
     grouped = (
     df.groupby(["Pclass", "Sex", "age_group"], dropna=False, observed=False)
       .agg(
@@ -35,7 +34,6 @@ def survival_demographics():
       )
       .reset_index()
       .rename(columns={"Pclass": "pclass", "Sex": "sex"})
-      .sort_values(["pclass", "sex", "age_group"])
     )
     
     # Force the exact categories and order we want for consistent plotting and to include zero-count groups
@@ -43,8 +41,8 @@ def survival_demographics():
     sex_order = ["female", "male"]
     age_order = ["child", "teen", "adult", "senior"]
 
-    # Make sure age_group uses these exact categories
-    df["age_group"] = pd.Categorical(df["age_group"], categories=age_order, ordered=True)
+    grouped["sex"] = grouped["sex"].astype(str).str.strip().str.lower()
+    grouped["age_group"] = grouped["age_group"].astype(str).str.strip().str.lower()
 
     # Reindex to include ALL combinations (including zero-member groups)
     all_combos = pd.MultiIndex.from_product(
@@ -69,33 +67,9 @@ def survival_demographics():
     # Sort in a consistent order
     grouped["sex"] = pd.Categorical(grouped["sex"], categories=sex_order, ordered=True)
     grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=age_order, ordered=True)
+    
     grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
-
-    # 1) Normalize to what the autograder expects
-    grouped["sex"] = grouped["sex"].astype(str).str.lower()
-    grouped["age_group"] = grouped["age_group"].astype(str).str.lower()
-
-    # 2) Force the exact full grid the autograder will look for
-    all_combos = pd.MultiIndex.from_product(
-        [[1, 2, 3], ["female", "male"], ["child", "teen", "adult", "senior"]],
-        names=["pclass", "sex", "age_group"],
-    )
-
-    grouped = (
-        grouped.set_index(["pclass", "sex", "age_group"])
-            .reindex(all_combos)
-            .reset_index()
-    )
-
-    # 3) Fill zero-member groups
-    grouped["n_passengers"] = grouped["n_passengers"].fillna(0).astype(int)
-    grouped["n_survivors"] = grouped["n_survivors"].fillna(0).astype(int)
-
-    # 4) Recompute survival_rate safely (avoids divide-by-zero issues)
-    grouped["survival_rate"] = (grouped["n_survivors"] / grouped["n_passengers"]).where(grouped["n_passengers"] != 0, 0.0)
-
-    # 5) Sort
-    grouped = grouped.sort_values(["pclass", "sex", "age_group"]).reset_index(drop=True)
+    
     return grouped
 
 def visualize_demographic():
